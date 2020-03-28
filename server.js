@@ -23,6 +23,9 @@ app.set('port', port)
 var server = http.createServer(app)
 
 const wss = new WebSocket.Server({ server })
+global.wss = wss
+const rooms = new Map()
+global.rooms = rooms
 
 function fanout (init, message) {
   wss.clients.forEach(ws => {
@@ -39,8 +42,27 @@ wss.on('connection', function connection (ws) {
     console.log('incoming', messageString)
     console.log('message type', message.type)
     switch (message.type) {
-      case 'init':
+      case 'init': {
         ws.init = message
+        const { roomId, userId } = message
+        let room = rooms.get(roomId)
+        if (!room) {
+          room = {
+            roomId,
+            users: new Map()
+          }
+          rooms.set(roomId, room)
+        }
+        let user = room.users.get(userId)
+        if (!user) {
+          user = {
+            roomId,
+            userId
+          }
+          room.user.set(userId, user)
+        }
+        user.ws = ws
+      }
         break
       case 'candidate':
         fanout(ws.init, message)

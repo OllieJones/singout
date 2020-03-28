@@ -1,5 +1,27 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  div.card.m-2
+    div.card-body
+      h1.h4.card-title= title
+      div.text-center
+        a.btn.btn-primary(href='/halls') Join in the fun!
+      p.
+        Welcome to #{title}. This is an experimental service where musicians can get together online to jam and rehearse.
+        It's #[i really] experimental right now. Will it work? Who knows?  Thanks for trying it out.
+
+      p.
+        To use it, you'll need a virtual rehearsal hall.
+        #[a(href='/halls') Get yours here]. Once you've got a hall you'll be able to invite other people.
+
+      p.
+        Please contact
+        #[a(href='mailto:olliejones@gmail.com') Ollie Jones], the hacker who's working on this,
+        with your comments or complaints. He's particularly interested
+        in how fast your music can go before you get nothing but confusion.
+
+      p.
+        You can find the source code #[a(href='https://github.com/OllieJones/singout') here]. It's
+        licensed under the permissive MIT license, so use it as you will.
+        Github offers a way to send in #[a(href='https://github.com/OllieJones/singout/issues') issues],
+        like bug reports or questions about how to use this.

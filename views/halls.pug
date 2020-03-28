@@ -1,0 +1,29 @@
+extends layout
+
+block content
+  div.card.m-2
+    div.card-body
+      h1.h4.card-title= title
+      form(action='', method='post')
+        div.row
+          div.table-responsive
+            table.table.table-slimline
+              thead
+                th.align-baseline.text-right
+                  label.font-weight-bold(for='username') Your&nbsp;name
+                th.align-baseline
+                  input#username.form-control(name='username', autocomplete='name', placeholder='Enter your name', value=userName || '', required)
+                tbody
+                    tr
+                      td.text-right
+                        button#new.btn.btn-primary(type='submit', name='new') Create
+                      td.w-100.align-baseline
+                        input#newname.form-control(name='newname', placeholder='Enter new hall name')
+                      each room in roomList
+                        tr
+                          td.text-right.align-baseline
+                            a.btn.btn-primary(href=`hall/${room.roomId}`, id=room.roomId) Join
+                          td.align-baseline
+                            span= room.name || room.roomId
+
+  //script(src='/js/index.bundle.js')

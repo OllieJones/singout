@@ -1,8 +1,13 @@
-body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
-}
+/* touchups to bootstrap styles */
 
-a {
-  color: #00B7FF;
+.table.table-slimline tbody td {
+    padding: 0.5rem;
+    vertical-align: top;
+    border-top: 0;
+}
+.table.table-slimline thead th {
+    padding: 0.5rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
 }
