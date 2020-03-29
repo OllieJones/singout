@@ -4,10 +4,14 @@
 /**
  * Module dependencies.
  */
-const app = require('./express_server')
 global.debug = require('debug')('singout:server')
+const config = require('config')
+require('properties')
+
+global.singout = config.get('singout')
+
+const app = require('./express_server')
 const http = require('http')
-const WebSocket = require('ws')
 
 /**
  * Get port from environment and store in Express.
@@ -15,65 +19,12 @@ const WebSocket = require('ws')
 
 var port = normalizePort(process.env.PORT || '3000')
 app.set('port', port)
-
+global.rooms = new Map()
 /**
  * Create HTTP server.
  */
 
 var server = http.createServer(app)
-
-const wss = new WebSocket.Server({ server })
-global.wss = wss
-const rooms = new Map()
-global.rooms = rooms
-
-function fanout (init, message) {
-  wss.clients.forEach(ws => {
-    if (ws.init && ws.init.roomId && ws.init.roomId === init.roomId) {
-      ws.send(JSON.stringify(message))
-    }
-  })
-}
-
-wss.on('connection', function connection (ws) {
-  global.debug('incoming websocket connection')
-  ws.on('message', function incoming (messageString) {
-    const message = JSON.parse(messageString)
-    console.log('incoming', messageString)
-    console.log('message type', message.type)
-    switch (message.type) {
-      case 'init': {
-        ws.init = message
-        const { roomId, userId } = message
-        let room = rooms.get(roomId)
-        if (!room) {
-          room = {
-            roomId,
-            users: new Map()
-          }
-          rooms.set(roomId, room)
-        }
-        let user = room.users.get(userId)
-        if (!user) {
-          user = {
-            roomId,
-            userId
-          }
-          room.user.set(userId, user)
-        }
-        user.ws = ws
-      }
-        break
-      case 'candidate':
-        fanout(ws.init, message)
-        break
-      default:
-        /* sdps don't have a type */
-        if (message.sdp) fanout(ws.init, message)
-        break
-    }
-  })
-})
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -83,6 +34,7 @@ server.listen(port)
 server.on('error', onError)
 server.on('listening', onListening)
 
+const hub = require('./hub_server')(port + 1)
 /**
  * Normalize a port into a number, string, or false.
  */

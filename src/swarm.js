@@ -1,32 +1,25 @@
 'use strict'
-/* global WebSocket */
 
-import FastRTCSwarm from '@mattkrick/fast-rtc-swarm'
+import webrtcSwarm from 'webrtc-swarm'
+import signalhub from 'signalhub'
 
-console.log('loading fast-rtc-swarm')
+console.log('loading webrtc-swarm')
 
-export default async function swarm (websockurl = 'ws://localhost:3000') {
-  const cam = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-  const socket = new WebSocket(websockurl)
-  socket.addEventListener('open', () => {
-    const swarm = new FastRTCSwarm({ isOfferer: true, streams: cam, roomId: 'hall', userId: 'ollie' })
-    // send the signal to the signaling server
-    swarm.on('signal', (signal) => {
-      socket.send(JSON.stringify(signal))
-    })
-    // when the signal come back, dispatch it to the swarm
-    socket.addEventListener('message', (event) => {
-      const payload = JSON.parse(event.data)
-      swarm.dispatch(payload)
-    })
-    // when the connection is open, say hi to your new peer
-    swarm.on('dataOpen', (peer) => {
-      console.log('data channel open!')
-      peer.send('hi')
-    })
-    // when your peer says hi, log it
-    swarm.on('data', (data, peer) => {
-      console.log('data received', data, peer)
-    })
+export default async function swarm (hubUrl, options) {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+  const hub = signalhub(options.roomId, [hubUrl])
+  const sw = webrtcSwarm(hub, {
+    stream,
+    uuid: options.userId
+  })
+
+  sw.on('peer', function (peer, id) {
+    console.log('connected to a new peer:', id)
+    console.log('total peers:', sw.peers.length)
+  })
+
+  sw.on('disconnect', function (peer, id) {
+    console.log('disconnected from a peer:', id)
+    console.log('total peers:', sw.peers.length)
   })
 }

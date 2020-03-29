@@ -1,0 +1,15 @@
+extends layout
+
+block meta
+  meta(id='singout-room', content=room.roomId)
+  meta(id='singout-user', content=userId)
+  meta(id='singout-servers', content=stunturnServers)
+  meta(id='singout-hub', content=hubSlug)
+
+block content
+  div.card.m-2
+    div.card-body
+      h1.h4.card-title= title
+
+block application-scripts
+  script(src='/js/index.bundle.js')

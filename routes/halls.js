@@ -26,7 +26,7 @@ router.post('/', function (req, res, next) {
     res.locals.userName = userName
   }
   const newname = req.body.newname || `${userName}'s hall`
-  const roomId = newname.replace(/[^a-zA-z0-9]/g, '').toLowerCase()
+  const roomId = newname.makeSlug()
   let room = res.locals.rooms.get(roomId)
   if (!room) {
     room = {
