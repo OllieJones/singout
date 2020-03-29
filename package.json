@@ -7,7 +7,6 @@
     "watch": "webpack --watch"
   },
   "dependencies": {
-    "@mattkrick/fast-rtc-swarm": "^0.3.3",
     "config": "^3.3.1",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
