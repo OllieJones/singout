@@ -4,15 +4,16 @@ block content
   div.card.m-2
     div.card-body
       h1.h4.card-title= title
-      p.text-center
-        a.btn.btn-primary(href='./halls/') Join in the fun!
+      form.form-inline(action='./halls/' method='post')
+        div.form-group
+          p.
+            Please tell us your name
+            #[input#username.form-control(name='username', autocomplete='name', placeholder='Enter your name', size=32, value=userName || '', required)]
+            and
+            #[button#register.btn.btn-primary(type='submit', name='register') join in the fun]
       p.
         Welcome to #{title}. This is an experimental service where musicians can get together online to jam and rehearse.
         It's #[i really] experimental right now. Will it work? Who knows?  Thanks for trying it out.
-
-      p.
-        To use it, you'll need a virtual rehearsal hall.
-        #[a(href='/halls') Get yours here]. Once you've got a hall you'll be able to invite other people.
 
       p.
         Please contact

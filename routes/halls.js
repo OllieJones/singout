@@ -25,16 +25,18 @@ router.post('/', function (req, res, next) {
     })
     res.locals.userName = userName
   }
-  const newname = req.body.newname || `${userName}'s hall`
-  const roomId = newname.makeSlug()
-  let room = res.locals.rooms.get(roomId)
-  if (!room) {
-    room = {
-      roomId,
-      name: newname,
-      users: new Map()
+  if (req.body.new === 'new') {
+    const newname = req.body.newname || `${userName}'s hall`
+    const roomId = newname.makeSlug()
+    let room = res.locals.rooms.get(roomId)
+    if (!room) {
+      room = {
+        roomId,
+        name: newname,
+        users: new Map()
+      }
+      res.locals.rooms.set(roomId, room)
     }
-    res.locals.rooms.set(roomId, room)
   }
   res.render('halls', { roomList: getSortedList(res.locals.rooms), title: 'Halls' })
 })
