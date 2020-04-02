@@ -8,13 +8,14 @@ function getMeta (name) {
 
 window.addEventListener('load', (event) => {
   const roomId = getMeta('singout-room')
-  const userId = getMeta('singout-user')
+  const userId = getMeta('singout-userid')
+  const userName = getMeta('singout-username')
   const servers = JSON.parse(getMeta('singout-servers'))
   const hub = getMeta('singout-hub')
 
   try {
     const hubHost = document.location.protocol + '//' + document.location.hostname + hub
-    swarm(hubHost, { roomId, userId, servers })
+    swarm(hubHost, { roomId, userId, userName, servers })
       .then(() => console.log('swarming'))
       .catch(error => console.error(error))
   } catch (error) {
