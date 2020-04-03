@@ -1,8 +1,11 @@
 'use strict'
 
+import webrtcAdapter from 'webrtc-adapter'
 import webrtcSwarm from './packages/webrtc-swarm'
 import sdputils from './packages/sdputils'
 import signalhub from 'signalhub'
+
+if (!webrtcAdapter) console.error('no webrtc-adapter')
 
 let deferred
 
@@ -35,9 +38,9 @@ function showPeers (peerList) {
 }
 
 // const unwantedCodecs = ['ISAC', 'G722', 'PCMU', 'PCMA', 'telephone-event', 'CN']
-const unwantedCodecs = ['PCMU', 'PCMA', 'telephone-event']
+const unwantedCodecs = ['PCMU', 'PCMA', 'telephone-event', 'CN', 'ISAC']
 
-function fixSdp (data, hub) {
+function mungSdp (data, hub) {
   if (data.signal && data.signal.type === 'offer' && typeof data.signal.sdp === 'string') {
     let sdp = data.signal.sdp
     sdp = sdputils.maybeSetOpusOptions(sdp, { opusMaxPbr: 24000, opusStereo: 'false', opusDtx: 'true' })
@@ -63,7 +66,6 @@ export default async function swarm (hubUrl, options) {
   const audioTags = document.getElementById('audio-tags')
   let statsInterval
 
-
   const localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
 
   window.remoteStreams = []
@@ -84,7 +86,7 @@ export default async function swarm (hubUrl, options) {
     config: {
       iceServers: [options.servers.v.iceServers]
     },
-    wrap: fixSdp
+    wrap: mungSdp
   })
 
   hub.subscribe('all')
@@ -100,11 +102,15 @@ export default async function swarm (hubUrl, options) {
       }
     })
 
+  let statsCounter = 0
+
   function getStats (peerConnection, freq = 5000) {
     return setInterval(function () {
-      peerConnection.getStats(function (stats) {
-        console.log(stats)
-      })
+      if (statsCounter++ < 10) {
+        peerConnection.getStats(function (stats) {
+          console.log(JSON.stringify(stats, 2))
+        })
+      }
     }, freq)
   }
 

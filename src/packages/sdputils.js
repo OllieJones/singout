@@ -52,12 +52,12 @@ function iceCandidateType (candidateStr) {
   return candidateStr.split(' ')[7]
 }
 
-function maybeSetPacketTimes (sdp, defsize, maxsize, type = 'audio' ) {
+function maybeSetPacketTimes (sdp, defsize, maxsize) {
   const sdpLines = sdp.split('\r\n')
-  const mLineIndex = findLine(sdpLines, 'a=', 'ssrc')
+  const mLineIndex = findLine(sdpLines, 'a=', 'ssrc:')
   if (mLineIndex) {
     if (defsize) sdpLines.splice(mLineIndex, 0, `a=ptime:${defsize}`)
-    if (maxsize) sdpLines.splice(mLineIndex + 1, 0, `a=ptime:${maxsize}`)
+    if (maxsize) sdpLines.splice(mLineIndex + 1, 0, `a=maxptime:${maxsize}`)
     return sdpLines.join('\r\n')
   }
   return sdp
@@ -257,6 +257,13 @@ function removePayloadTypeFromMline (mLine, payloadType) {
   return mLine.join(' ')
 }
 
+/**
+ * remove a codec from an offered SDP
+ * @param {string} sdp
+ * @param {string} codec codec name, for example 'G722/8000' or 'CN'
+ * @param {string }type  'audio' or 'video'
+ * @returns {string} updated sdp
+ */
 function removeCodecByName (sdp, codec, type) {
   let sdpLines = sdp.split('\r\n')
   let count = sdpLines.length
@@ -274,6 +281,7 @@ function removeCodecByName (sdp, codec, type) {
  * Remove a codec from an SDP
  * @param {Array.string} sdpLines
  * @param {string} codec to suppress
+ * @param {string} [type='video'] 'video' or 'audio'
  * @returns {Array.string} sdpLines
  */
 function _removeCodecByName (sdpLines, codec, type = 'video') {
