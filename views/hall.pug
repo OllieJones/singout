@@ -8,18 +8,16 @@ block meta
   meta(id='singout-hub', content=hubSlug)
 
 block content
-  div.card.m-2
+  div.card.rounded.m-2
+    h1.h4.card-header= title
     div.card-body
-      h1.h4.card-title= title
-    div.table-responsive
-      table.table.table-slimline
-        thead
-          th.align-baseline Name
-          th.align-baseline It's me
-        tbody#peer-table-body
-    div#audio-tags
-
-
+      div.table-responsive
+        table.table.table-slimline
+          thead
+            th.align-baseline Name
+            th.align-baseline It's me
+          tbody#peer-table-body
+      div#audio-tags
 
 block application-scripts
   script(src='/js/index.bundle.js')

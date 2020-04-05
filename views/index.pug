@@ -1,28 +1,29 @@
 extends layout
 
 block content
-  div.card.m-2
+  div.card.rounded.m-2
+    h1.h4.card-header= title
     div.card-body
-      h1.h4.card-title= title
-      form.form-inline(action='./halls/' method='post')
+      form(action='./halls/' method='post')
         div.form-group
-          p.
-            Please tell us your name
-            #[input#username.form-control(name='username', autocomplete='name', placeholder='Enter your name', size=32, value=userName || '', required)]
-            and
-            #[button#register.btn.btn-primary(type='submit', name='register') join in the fun]
-      p.
+          label(for='username') Your name
+          input#username.form-control(name='username', autocomplete='name', placeholder='Your name or nickname', value=userName || '', required)
+        button#register.btn.btn-primary(type='submit', name='register') Join in the fun!
+      p.mt-3.
         Welcome to #{title}. This is an experimental service where musicians can get together online to jam and rehearse.
         It's #[i really] experimental right now. Will it work? Who knows?  Thanks for trying it out.
 
-      p.
+      p.card-text.
         Please contact
         #[a(href='mailto:olliejones@gmail.com') Ollie Jones], the hacker who's working on this,
         with your comments or complaints. He's particularly interested
         in how fast your music can go before you get nothing but confusion.
 
-      p.
+      p.card-text.
         You can find the source code #[a(href='https://github.com/OllieJones/singout') here]. It's
         licensed under the permissive MIT license, so use it as you will.
         Github offers a way to send in #[a(href='https://github.com/OllieJones/singout/issues') issues],
         like bug reports or questions about how to use this.
+
+      p.card-text.
+        Have fun! Be healthy!
