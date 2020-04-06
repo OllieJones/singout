@@ -26,12 +26,17 @@ function showPeers (peerList) {
     while (peerTable.hasChildNodes()) peerTable.removeChild(peerTable.firstChild)
     list.forEach(user => {
       const name = document.createElement('td')
-      name.innerText = user.name
-      const flag = document.createElement('td')
-      flag.innerText = user.self ? '*' : ''
+      name.innerText = user.name + (user.self ? ' (me)' : '')
+      const meter = document.createElement('meter')
+      meter.max = 200
+      meter.min = 0
+      meter.value = 0
+      meter.id = user.self ? 'meter-local-user' : `meter-${user.userId}`
+      const metercol = document.createElement('td')
+      metercol.appendChild(meter)
       const row = document.createElement('tr')
       row.appendChild(name)
-      row.appendChild(flag)
+      row.appendChild(metercol)
       peerTable.appendChild(row)
     })
   }
@@ -102,13 +107,38 @@ export default async function swarm (hubUrl, options) {
       }
     })
 
-  let statsCounter = 0
-
-  function getStats (peerConnection, freq = 5000) {
+  function getStats (peerConnection, participant, freq = 500) {
     return setInterval(function () {
-      if (statsCounter++ < 10) {
+      const meter = document.getElementById(`meter-${participant.userId}`)
+      const myMeter = document.getElementById('meter-local-user')
+      if (meter || myMeter) {
         peerConnection.getStats(function (stats) {
-          console.log(JSON.stringify(stats, 2))
+          let theirLevel = 0
+          let myLevel = 0
+          if (meter) {
+            /* search the stats for what we need */
+            const inbound = stats.find(item => {
+              return item.kind === 'audio' && item.type.indexOf('inbound') === 0 && item.trackId
+            })
+            if (!inbound) return
+            const audioSource = stats.find(item => {
+              return item.id === inbound.trackId && typeof item.audioLevel === 'number'
+            })
+            if (audioSource) {
+              theirLevel = audioSource.audioLevel * 200
+              meter.value = theirLevel
+            }
+          }
+          if (myMeter) {
+            const mySource = stats.find(item => {
+              return item.kind === 'audio' && item.type === 'media-source' && typeof item.audioLevel === 'number'
+            })
+            if (mySource) {
+              myLevel = mySource.audioLevel * 200
+              myMeter.value = myLevel
+            }
+          }
+          console.log(participant.userId, theirLevel.toFixed(0), myLevel.toFixed(0))
         })
       }
     }, freq)
@@ -135,10 +165,10 @@ export default async function swarm (hubUrl, options) {
         label: '',
         type: 'userDescription'
       }
+      statsInterval = getStats(pc, participant)
       if (!peerList.has(id)) peerList.set(id, participant)
       deferShowPeers(peerList)
     })
-    statsInterval = getStats(pc)
   })
 
   sw.on('disconnect', function (peer, id) {
