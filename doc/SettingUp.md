@@ -110,3 +110,20 @@ Run this.
 Then edit `/etc/letsencrypt/options-ssl-nginx.conf` to put in the SSL configuration recommended by
 [Mozilla's SSL Configuration Generator](https://ssl-config.mozilla.org/#server=nginx). 
 For some reason `certbot` adds some absurdly obsolete cypher suites.
+
+## pm2, to keep the server running
+
+See [this tutorial](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-node-js-application-for-production-on-ubuntu-18-04).
+
+```
+sudo npm install pm2@latest -g
+cd ~/singout
+pm2 start server.js --name singout
+pm2 startup systemd
+# follow the directions
+pm2 save
+sudo systemctl start pm2-ollie
+systemctl status pm2-ollie
+
+
+```
