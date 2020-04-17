@@ -1,11 +1,8 @@
 'use strict'
 
-import webrtcAdapter from 'webrtc-adapter'
-import webrtcSwarm from './packages/webrtc-swarm'
+import webrtcSwarm from '@olliejones/webrtc-swarm'
 import sdputils from './packages/sdputils'
 import signalhub from 'signalhub'
-
-if (!webrtcAdapter) console.error('no webrtc-adapter')
 
 let deferred
 
@@ -112,7 +109,10 @@ export default async function swarm (hubUrl, options) {
       const meter = document.getElementById(`meter-${participant.userId}`)
       const myMeter = document.getElementById('meter-local-user')
       if (meter || myMeter) {
-        peerConnection.getStats(function (stats) {
+        peerConnection.getStats((_, stats) => {
+          if (!stats) {
+            return
+          }
           let theirLevel = 0
           let myLevel = 0
           if (meter) {
@@ -144,17 +144,17 @@ export default async function swarm (hubUrl, options) {
     }, freq)
   }
 
-  function ontrackHandler (event) {
+  function ontrackHandler (track, stream) {
     const audio = document.createElement('audio')
     audio.autoplay = true
     audio.muted = false
     audio.setAttribute('data-userid', '?')
     audioTags.appendChild(audio)
-    audio.srcObject = event.streams[0]
+    audio.srcObject = stream
   }
 
-  sw.on('connect', function (pc, id) {
-    /* a new peer is ready */
+  sw.on('peer-connecting', function (pc, id) {
+    /* a new peer is ready for the connection process */
     pc.on('track', ontrackHandler)
     pc.on('connect', function () {
       console.log('connection completed')
