@@ -36,7 +36,7 @@ app.use((req, res, next) => {
   next()
 })
 
-// deal with proxy trust
+// deal with reverse proxy (nginx) trust
 const trustedProxies = global.singout.trustedProxies || 'loopback'
 app.set('trust proxy', trustedProxies)
 

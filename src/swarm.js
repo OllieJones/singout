@@ -22,34 +22,69 @@ function showPeers (peerList) {
   if (peerTable) {
     while (peerTable.hasChildNodes()) peerTable.removeChild(peerTable.firstChild)
     list.forEach(user => {
-      const name = document.createElement('td')
-      name.innerText = user.name + (user.self ? ' (me)' : '')
+
+      const nameCol = document.createElement('td')
+      nameCol.innerText = user.name + (user.self ? ' (me)' : '')
+
+      const statCol = document.createElement('td')
+      statCol.id = user.self ? 'stat-local-user' : `stat-${user.userId}`
+
       const meter = document.createElement('meter')
       meter.max = 200
       meter.min = 0
       meter.value = 0
       meter.id = user.self ? 'meter-local-user' : `meter-${user.userId}`
-      const metercol = document.createElement('td')
-      metercol.appendChild(meter)
+      const meterCol = document.createElement('td')
+      meterCol.appendChild(meter)
+
       const row = document.createElement('tr')
-      row.appendChild(name)
-      row.appendChild(metercol)
+      row.appendChild(nameCol)
+      row.appendChild(statCol)
+      row.appendChild(meterCol)
       peerTable.appendChild(row)
     })
   }
 }
 
+function makeConstraints () {
+  const c = {}
+  c.video = false
+
+  const a = {}
+  a.sampleSize = 16
+  a.sampleRate = { min: 16000, ideal: 24000, max: 48000 }
+  a.latency = { ideal: 0.005, max: 0.02 }
+  a.noiseSuppression = false
+  a.channelCount = { ideal: 1 }
+  a.echoCancellation = false
+  a.autoGainControl = true
+
+  c.audio = a
+  return c
+}
+
+function displayCapabilities (stream) {
+  console.log(navigator.mediaDevices.getSupportedConstraints())
+  const tracks = stream.getTracks()
+  tracks.forEach(track => {
+    const caps = track.getCapabilities()
+    const settings = track.getSettings()
+    const constraints = track.getConstraints()
+    console.log(track.kind, track.label, caps, settings, constraints)
+  })
+}
+
 // const unwantedCodecs = ['ISAC', 'G722', 'PCMU', 'PCMA', 'telephone-event', 'CN']
-const unwantedCodecs = ['PCMU', 'PCMA', 'telephone-event', 'CN', 'ISAC']
+const unwantedCodecs = ['PCMU', 'PCMA', 'telephone-event', 'ISAC']
 
 function mungSdp (data, hub) {
   if (data.signal && data.signal.type === 'offer' && typeof data.signal.sdp === 'string') {
     let sdp = data.signal.sdp
     sdp = sdputils.maybeSetOpusOptions(sdp, { opusMaxPbr: 24000, opusStereo: 'false', opusDtx: 'true' })
-    sdp = sdputils.maybeSetAudioSendBitRate(sdp, { audioSendBitrate: 32000 })
-    sdp = sdputils.maybeSetAudioReceiveBitRate(sdp, { audioSendBitrate: 32000 })
+    sdp = sdputils.maybeSetAudioSendBitRate(sdp, { audioSendBitrate: 16000 })
+    sdp = sdputils.maybeSetAudioReceiveBitRate(sdp, { audioRecvBitrate: 16000 })
     sdp = sdputils.maybePreferCodec(sdp, 'audio', 'send', 'opus')
-    sdp = sdputils.maybeSetPacketTimes(sdp, 20, 40)
+    sdp = sdputils.maybeSetPacketTimes(sdp, 5, 20)
     unwantedCodecs.forEach(codec => {
       sdp = sdputils.removeCodecByName(sdp, codec, 'audio')
     })
@@ -68,9 +103,8 @@ export default async function swarm (hubUrl, options) {
   const audioTags = document.getElementById('audio-tags')
   let statsInterval
 
-  const localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+  const localStream = await navigator.mediaDevices.getUserMedia(makeConstraints())
 
-  window.remoteStreams = []
   const localParticipant = {
     userId: options.userId,
     name: options.userName || options.userId,
@@ -78,6 +112,9 @@ export default async function swarm (hubUrl, options) {
     label: '',
     type: 'userDescription'
   }
+
+  displayCapabilities(localStream)
+
   peerList.set(options.userId, localParticipant)
   deferShowPeers(peerList)
 
@@ -108,7 +145,9 @@ export default async function swarm (hubUrl, options) {
     return setInterval(function () {
       const meter = document.getElementById(`meter-${participant.userId}`)
       const myMeter = document.getElementById('meter-local-user')
-      if (meter || myMeter) {
+      const stat = document.getElementById(`stat-${participant.userId}`)
+      const myStat = document.getElementById('stat-local-user')
+      if (meter || myMeter || stat || myStat) {
         peerConnection.getStats((_, stats) => {
           if (!stats) {
             return
@@ -138,7 +177,17 @@ export default async function swarm (hubUrl, options) {
               myMeter.value = myLevel
             }
           }
-          console.log(participant.userId, theirLevel.toFixed(0), myLevel.toFixed(0))
+          let rttReport = ''
+          if (stat) {
+            const cpair = stats.find(item => {
+              return item.type === 'candidate-pair' && item.nominated === true &&
+                typeof item.totalRoundTripTime === 'number' &&
+                typeof item.currentRoundTripTime === 'number'
+            })
+            rttReport = `tRtt:${(1000 * cpair.totalRoundTripTime).toFixed(0)} cRtt:${(1000 * cpair.currentRoundTripTime).toFixed(0)}`
+            stat.innerText = rttReport
+          }
+          console.log(participant.userId, theirLevel.toFixed(0), myLevel.toFixed(0), rttReport)
         })
       }
     }, freq)
