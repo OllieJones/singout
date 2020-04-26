@@ -12,3 +12,11 @@
     border-bottom: 1px solid #dee2e6;
 }
 
+/* css adjacentcy to style icon when checkbox is checked */
+input.checkbox:checked + label.checkbox-label {
+    color: #007bff!important;
+}
+
+label.checkbox-label  {
+    color: #d0d0d0;
+}

@@ -12,6 +12,9 @@ function getSortedList (rooms) {
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
+  res.locals.rooms.forEach((room, name) => {
+    // console.log(room.roomId, room.name, room.video, room.users.size)
+  })
   res.render('halls', { roomList: getSortedList(res.locals.rooms), title: 'Halls' })
 })
 
@@ -27,12 +30,14 @@ router.post('/', function (req, res, next) {
   }
   if (req.body.new === 'new') {
     const newname = req.body.newname || `${userName}'s hall`
+    const video = !!req.body.newvideo
     const roomId = newname.makeSlug()
     let room = res.locals.rooms.get(roomId)
     if (!room) {
       room = {
         roomId,
         name: newname,
+        video: video,
         users: new Map()
       }
       res.locals.rooms.set(roomId, room)

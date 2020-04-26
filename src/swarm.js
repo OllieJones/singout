@@ -29,6 +29,16 @@ function showPeers (peerList) {
       const statCol = document.createElement('td')
       statCol.id = user.self ? 'stat-local-user' : `stat-${user.userId}`
 
+      const latencyCol = document.createElement('td')
+      if (!user.self) {
+        const latency = document.createElement('meter')
+        latency.max = 200
+        latency.min = 0
+        latency.value = 0
+        latency.id = `latency-${user.userId}`
+        latencyCol.appendChild(latency)
+      }
+
       const meter = document.createElement('meter')
       meter.max = 200
       meter.min = 0
@@ -40,15 +50,21 @@ function showPeers (peerList) {
       const row = document.createElement('tr')
       row.appendChild(nameCol)
       row.appendChild(statCol)
+      row.appendChild(latencyCol)
       row.appendChild(meterCol)
       peerTable.appendChild(row)
     })
   }
 }
 
-function makeConstraints () {
+function makeConstraints (options) {
   const c = {}
-  c.video = false
+  let video = false
+  if (options.video.toLowerCase() === 'true') video = true
+  else if (options.video.toLowerCase() === 'false') video = false
+  else video = options.video
+
+  c.video = video
 
   const a = {}
   a.sampleSize = 16
@@ -100,10 +116,10 @@ export default async function swarm (hubUrl, options) {
     return
   }
   const peerList = new Map()
-  const audioTags = document.getElementById('audio-tags')
+  const playerTags = document.getElementById('audio-tags')
   let statsInterval
 
-  const localStream = await navigator.mediaDevices.getUserMedia(makeConstraints())
+  const localStream = await navigator.mediaDevices.getUserMedia(makeConstraints(options))
 
   const localParticipant = {
     userId: options.userId,
@@ -147,7 +163,8 @@ export default async function swarm (hubUrl, options) {
       const myMeter = document.getElementById('meter-local-user')
       const stat = document.getElementById(`stat-${participant.userId}`)
       const myStat = document.getElementById('stat-local-user')
-      if (meter || myMeter || stat || myStat) {
+      const latency = document.getElementById(`latency-${participant.userId}`)
+      if (meter || myMeter || stat || myStat || latency) {
         peerConnection.getStats((_, stats) => {
           if (!stats) {
             return
@@ -178,14 +195,16 @@ export default async function swarm (hubUrl, options) {
             }
           }
           let rttReport = ''
-          if (stat) {
+          if (stat || latency) {
             const cpair = stats.find(item => {
               return item.type === 'candidate-pair' && item.nominated === true &&
                 typeof item.totalRoundTripTime === 'number' &&
                 typeof item.currentRoundTripTime === 'number'
             })
-            rttReport = `tRtt:${(1000 * cpair.totalRoundTripTime).toFixed(0)} cRtt:${(1000 * cpair.currentRoundTripTime).toFixed(0)}`
-            stat.innerText = rttReport
+            const latencyNow = Math.round(cpair.currentRoundTripTime * 1000)
+            rttReport = `latency:${latencyNow}`
+            if (stat) stat.innerText = rttReport
+            if (latency) latency.value = latencyNow
           }
           console.log(participant.userId, theirLevel.toFixed(0), myLevel.toFixed(0), rttReport)
         })
@@ -194,12 +213,12 @@ export default async function swarm (hubUrl, options) {
   }
 
   function ontrackHandler (track, stream) {
-    const audio = document.createElement('audio')
-    audio.autoplay = true
-    audio.muted = false
-    audio.setAttribute('data-userid', '?')
-    audioTags.appendChild(audio)
-    audio.srcObject = stream
+    const player = document.createElement('audio')
+    player.autoplay = true
+    player.muted = false
+    player.setAttribute('data-userid', '?')
+    playerTags.appendChild(player)
+    player.srcObject = stream
   }
 
   sw.on('peer-connecting', function (pc, id) {
@@ -227,9 +246,9 @@ export default async function swarm (hubUrl, options) {
     deferShowPeers(peerList)
     console.log('disconnected from a peer:', id)
     console.log('total peers:', (sw && sw.peers && typeof sw.peers.length === 'number' ? sw.peers.length : 'none'))
-    audioTags.childNodes.forEach(audio => {
+    playerTags.childNodes.forEach(audio => {
       if (audio.getAttribute('data-userid') === 'id') {
-        audioTags.removeChild(audio)
+        playerTags.removeChild(audio)
       }
     })
   })

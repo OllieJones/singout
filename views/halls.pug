@@ -14,17 +14,34 @@ block content
             thead
               th.align-baseline.text-right
                 label.font-weight-bold(for='username') Your&nbsp;name
-              th.align-baseline
+              th.w-100.align-baseline
                 input#username.form-control(name='username', autocomplete='name', placeholder='Enter your name', value=userName || '', required)
               tbody
                   tr
                     td.text-right
-                      button#new.btn.btn-primary(type='submit', name='new' value='new') Create
-                    td.w-100.align-baseline
-                      input#newname.form-control(name='newname', placeholder='Enter new hall name')
+                      div.form-inline.justify-content-end
+                        div.form-group
+                          button#new.btn.btn-primary(type='submit', name='new' value='new') Create
+                    td.text-right
+                      div.form-inline
+                        div.form-group
+                          input#newname.form-control(name='newname', placeholder='Enter new hall name')
+                        div.form-group
+                          input.checkbox#newvideo.ml-2(name='newvideo', type='checkbox')
+                          label.fa.fa-video-camera.checkbox-label.ml-1(for="newvideo")
+
                     each room in roomList
                       tr
                         td.text-right.align-baseline
                           a.btn.btn-primary(href=`/hall/${room.roomId}`, id=room.roomId) Join
                         td.align-baseline
                           span= room.name || room.roomId
+                          if room.video
+                            i.fa.fa-video-camera.text-primary.ml-3
+                          if room.users.size > 0
+                            if room.users.size > 1
+                              i.fa.fa-users.text-primary.ml-3
+                            else
+                              i.fa.fa-user.text-primary.ml-3
+                            span.ml-1= room.users.size
+
