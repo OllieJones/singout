@@ -25,7 +25,7 @@ block content
                     td.text-right
                       div.form-inline
                         div.form-group
-                          input#newname.form-control(name='newname', placeholder='Enter new hall name')
+                          input#newname.form-control(name='newname', placeholder='Enter new hall name', size=24)
                         div.form-group
                           input.checkbox#newvideo.ml-2(name='newvideo', type='checkbox')
                           label.fa.fa-video-camera.checkbox-label.ml-1(for="newvideo")
@@ -33,9 +33,10 @@ block content
                     each room in roomList
                       tr
                         td.text-right.align-baseline
-                          a.btn.btn-primary(href=`/hall/${room.roomId}`, id=room.roomId) Join
+                          a.btn.btn-primary(href=`/hall/${room.roomId}`, id=room.roomId, title='Enter')
+                            i.fa.fa-sign-out
                         td.align-baseline
-                          span= room.name || room.roomId
+                          a.ml-2(href=`/hall/${room.roomId}`)= room.name || room.roomId
                           if room.video
                             i.fa.fa-video-camera.text-primary.ml-3
                           if room.users.size > 0

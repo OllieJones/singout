@@ -1,7 +1,9 @@
 'use strict'
+/* global MediaStream */
 
 import webrtcSwarm from '@olliejones/webrtc-swarm'
 import sdputils from './packages/sdputils'
+import getStats from './getstats'
 import signalhub from 'signalhub'
 
 let deferred
@@ -14,6 +16,8 @@ function deferShowPeers (peerList) {
   }, 500, peerList)
 }
 
+const wantTextStats = false
+
 function showPeers (peerList) {
   const list = []
   peerList.forEach(value => list.push(value))
@@ -22,20 +26,21 @@ function showPeers (peerList) {
   if (peerTable) {
     while (peerTable.hasChildNodes()) peerTable.removeChild(peerTable.firstChild)
     list.forEach(user => {
-
       const nameCol = document.createElement('td')
       nameCol.innerText = user.name + (user.self ? ' (me)' : '')
-
-      const statCol = document.createElement('td')
-      statCol.id = user.self ? 'stat-local-user' : `stat-${user.userId}`
-
+      let statCol
+      if (wantTextStats) {
+        statCol = document.createElement('td')
+        statCol.id = user.self ? 'stat-local-user' : `stat-${user.userId}`
+      }
       const latencyCol = document.createElement('td')
       if (!user.self) {
         const latency = document.createElement('meter')
-        latency.max = 200
+        latency.max = 50
         latency.min = 0
         latency.value = 0
         latency.id = `latency-${user.userId}`
+        latency.title = ''
         latencyCol.appendChild(latency)
       }
 
@@ -49,7 +54,7 @@ function showPeers (peerList) {
 
       const row = document.createElement('tr')
       row.appendChild(nameCol)
-      row.appendChild(statCol)
+      if (statCol) row.appendChild(statCol)
       row.appendChild(latencyCol)
       row.appendChild(meterCol)
       peerTable.appendChild(row)
@@ -57,7 +62,7 @@ function showPeers (peerList) {
   }
 }
 
-function makeConstraints (options) {
+function makeConstraints (options, headphones = false) {
   const c = {}
   let video = false
   if (options.video.toLowerCase() === 'true') video = true
@@ -70,9 +75,9 @@ function makeConstraints (options) {
   a.sampleSize = 16
   a.sampleRate = { min: 16000, ideal: 24000, max: 48000 }
   a.latency = { ideal: 0.005, max: 0.02 }
-  a.noiseSuppression = false
+  a.noiseSuppression = !headphones
   a.channelCount = { ideal: 1 }
-  a.echoCancellation = false
+  a.echoCancellation = !headphones
   a.autoGainControl = true
 
   c.audio = a
@@ -117,7 +122,7 @@ export default async function swarm (hubUrl, options) {
   }
   const peerList = new Map()
   const playerTags = document.getElementById('audio-tags')
-  let statsInterval
+  let statsTimeout
 
   const localStream = await navigator.mediaDevices.getUserMedia(makeConstraints(options))
 
@@ -140,13 +145,14 @@ export default async function swarm (hubUrl, options) {
     stream: localStream,
     config: {
       iceServers: [options.servers.v.iceServers]
-    },
-    wrap: mungSdp
+    }
+    // HACK HACK , wrap: mungSdp
   })
 
   hub.subscribe('all')
     .on('data', message => {
       if (message.type === 'userDescription') {
+        /* extract the username from a message */
         const userId = message.userId
         if (userId !== options.userId && peerList.has(userId)) {
           const peer = peerList.get(userId)
@@ -157,72 +163,31 @@ export default async function swarm (hubUrl, options) {
       }
     })
 
-  function getStats (peerConnection, participant, freq = 500) {
-    return setInterval(function () {
-      const meter = document.getElementById(`meter-${participant.userId}`)
-      const myMeter = document.getElementById('meter-local-user')
-      const stat = document.getElementById(`stat-${participant.userId}`)
-      const myStat = document.getElementById('stat-local-user')
-      const latency = document.getElementById(`latency-${participant.userId}`)
-      if (meter || myMeter || stat || myStat || latency) {
-        peerConnection.getStats((_, stats) => {
-          if (!stats) {
-            return
-          }
-          let theirLevel = 0
-          let myLevel = 0
-          if (meter) {
-            /* search the stats for what we need */
-            const inbound = stats.find(item => {
-              return item.kind === 'audio' && item.type.indexOf('inbound') === 0 && item.trackId
-            })
-            if (!inbound) return
-            const audioSource = stats.find(item => {
-              return item.id === inbound.trackId && typeof item.audioLevel === 'number'
-            })
-            if (audioSource) {
-              theirLevel = audioSource.audioLevel * 200
-              meter.value = theirLevel
-            }
-          }
-          if (myMeter) {
-            const mySource = stats.find(item => {
-              return item.kind === 'audio' && item.type === 'media-source' && typeof item.audioLevel === 'number'
-            })
-            if (mySource) {
-              myLevel = mySource.audioLevel * 200
-              myMeter.value = myLevel
-            }
-          }
-          let rttReport = ''
-          if (stat || latency) {
-            const cpair = stats.find(item => {
-              return item.type === 'candidate-pair' && item.nominated === true &&
-                typeof item.totalRoundTripTime === 'number' &&
-                typeof item.currentRoundTripTime === 'number'
-            })
-            const latencyNow = Math.round(cpair.currentRoundTripTime * 1000)
-            rttReport = `latency:${latencyNow}`
-            if (stat) stat.innerText = rttReport
-            if (latency) latency.value = latencyNow
-          }
-          console.log(participant.userId, theirLevel.toFixed(0), myLevel.toFixed(0), rttReport)
-        })
-      }
-    }, freq)
-  }
-
-  function ontrackHandler (track, stream) {
-    const player = document.createElement('audio')
-    player.autoplay = true
-    player.muted = false
-    player.setAttribute('data-userid', '?')
-    playerTags.appendChild(player)
-    player.srcObject = stream
+  function ontrackHandler (track, stream, split = false) {
+    let kind = track.kind
+    const hasVideo = stream.getTracks().find(track => track.kind === 'video')
+    /* on a split track setup, we'll put audio and video on separate players */
+    if (!split) kind = hasVideo ? 'video' : 'audio'
+    const streamId = stream.id
+    const players = Array.prototype.slice.call(playerTags.childNodes)
+    let player = players.find(player => player.streamId === streamId && player.tagName.toLowerCase() === kind)
+    if (!player) {
+      player = document.createElement(kind)
+      player.streamId = streamId
+      player.autoplay = true
+      player.playsinline = true
+      player.muted = false
+      player.srcObject = this.remoteStream
+      player.setAttribute('data-userid', '?')
+      playerTags.appendChild(player)
+      console.log('created ', kind, ' element')
+    }
+    this.remoteStream.addTrack(track, stream)
   }
 
   sw.on('peer-connecting', function (pc, id) {
     /* a new peer is ready for the connection process */
+    pc.remoteStream = new MediaStream()
     pc.on('track', ontrackHandler)
     pc.on('connect', function () {
       console.log('connection completed')
@@ -233,22 +198,22 @@ export default async function swarm (hubUrl, options) {
         label: '',
         type: 'userDescription'
       }
-      statsInterval = getStats(pc, participant)
+      statsTimeout = getStats(pc, participant)
       if (!peerList.has(id)) peerList.set(id, participant)
       deferShowPeers(peerList)
     })
   })
 
   sw.on('disconnect', function (peer, id) {
-    if (statsInterval) clearInterval(statsInterval)
-    statsInterval = null
+    if (statsTimeout) clearTimeout(statsTimeout)
+    statsTimeout = null
     if (peerList.has(id)) peerList.delete(id)
     deferShowPeers(peerList)
     console.log('disconnected from a peer:', id)
     console.log('total peers:', (sw && sw.peers && typeof sw.peers.length === 'number' ? sw.peers.length : 'none'))
-    playerTags.childNodes.forEach(audio => {
-      if (audio.getAttribute('data-userid') === 'id') {
-        playerTags.removeChild(audio)
+    playerTags.childNodes.forEach(player => {
+      if (player.getAttribute('data-userid') === 'id') {
+        playerTags.removeChild(player)
       }
     })
   })

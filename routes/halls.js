@@ -15,7 +15,7 @@ router.get('/', function (req, res, next) {
   res.locals.rooms.forEach((room, name) => {
     // console.log(room.roomId, room.name, room.video, room.users.size)
   })
-  res.render('halls', { roomList: getSortedList(res.locals.rooms), title: 'Halls' })
+  res.render('halls', { roomList: getSortedList(res.locals.rooms), title: 'Lobby' })
 })
 
 router.post('/', function (req, res, next) {
